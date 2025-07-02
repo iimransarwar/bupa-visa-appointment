@@ -11,13 +11,16 @@ import os
 import subprocess
 from datetime import datetime
 import pytz
-import requests  # Added for ntfy notifications
+import requests
 
 # Set up logging to only show ERROR level messages
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # ntfy topic for push notifications (replace with your unique topic)
 NTFY_TOPIC = "appointment-alerts"  # Customize this
+
+# Interval between runs (in seconds, 3600 = 1 hour)
+RUN_INTERVAL_SECONDS = 3600
 
 def send_ntfy_notification(message):
     """Send a push notification via ntfy."""
@@ -46,16 +49,16 @@ def scrape_appointments():
             chromedriver_path = subprocess.check_output(["which", "chromedriver"]).decode().strip()
         except subprocess.CalledProcessError:
             logging.error("ChromeDriver not found in PATH. Please install ChromeDriver.")
-            return
+            return False
 
     # Verify ChromeDriver is not a directory
     if os.path.isdir(chromedriver_path):
         logging.error(f"{chromedriver_path} is a directory, not an executable. Please replace with the ChromeDriver executable.")
-        return
+        return False
 
     # Set up Chrome options for headless mode
     chrome_options = Options()
-    chrome_options.add_argument("--headless=new")  # Run in headless mode
+    chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
@@ -69,28 +72,26 @@ def scrape_appointments():
         driver = webdriver.Chrome(service=service, options=chrome_options)
     except Exception as e:
         logging.error(f"Failed to initialize ChromeDriver: {str(e)}")
-        return
+        return False
 
     try:
-        # Step 1: Navigate to the default page
+        # Navigate to the default page
         driver.get("https://bmvs.onlineappointmentscheduling.net.au/oasis/Default.aspx")
-        time.sleep(5)  # Initial delay for page load
+        time.sleep(5)
 
         # Click the "New Individual booking" button
         booking_button = WebDriverWait(driver, 30).until(
             EC.element_to_be_clickable((By.ID, "ContentPlaceHolder1_btnInd"))
         )
         booking_button.click()
-        time.sleep(5)  # Wait for navigation to location page
+        time.sleep(5)
 
-        # Step 2: Proceed with location page
+        # Proceed with location page
         try:
-            # Try ID-based selector first
             location_input = WebDriverWait(driver, 60).until(
                 EC.presence_of_element_located((By.ID, "ContentPlaceHolder1_SelectLocation1_txtSuburb"))
             )
         except Exception as e:
-            # Fallback to XPath selector
             location_input = WebDriverWait(driver, 60).until(
                 EC.presence_of_element_located((By.XPATH, "//input[contains(@id, 'txtSuburb')]"))
             )
@@ -102,14 +103,14 @@ def scrape_appointments():
         # Click the search button
         search_button = driver.find_element(By.XPATH, "//input[@value='Search' and @class='blue-button']")
         driver.execute_script("SearchPostCode();")
-        time.sleep(2)  # Wait for JavaScript to execute
+        time.sleep(2)
 
         # Wait for the results table to load
         WebDriverWait(driver, 60).until(
             EC.presence_of_element_located((By.CLASS_NAME, "trlocation"))
         )
 
-        # Get page source and parse with BeautifulSoup
+        # Parse page source
         soup = BeautifulSoup(driver.page_source, 'html.parser')
         results = []
 
@@ -117,24 +118,19 @@ def scrape_appointments():
         location_rows = soup.find_all('tr', class_='trlocation')
 
         for row in location_rows:
-            # Get distance
             distance_cell = row.find('td', class_='td-distance')
             if distance_cell:
                 distance_text = distance_cell.find('span').text.strip()
                 try:
-                    distance = int(distance_text.split()[0])  # Extract number from "X km"
+                    distance = int(distance_text.split()[0])
                 except ValueError:
                     continue
 
-                # Check if distance is less than 50km
                 if distance < 50:
-                    # Check availability
                     availability_cell = row.find('td', class_='tdloc_availability')
                     availability = availability_cell.find('span').text.strip()
 
-                    # Only include if slot is available
                     if availability != "No available slot":
-                        # Get location name and address
                         name_cell = row.find('td', class_='tdloc_name')
                         location_name = name_cell.find('label', class_='tdlocNameTitle').text.strip()
                         address = name_cell.find('span').text.strip()
@@ -158,7 +154,6 @@ def scrape_appointments():
                 print(f"Distance: {result['distance']}")
                 print(f"Availability: {result['availability']}")
                 print("-" * 50)
-                # Add to notification message
                 notification_message += (
                     f"Location: {result['location']}\n"
                     f"Address: {result['address']}\n"
@@ -166,17 +161,20 @@ def scrape_appointments():
                     f"Availability: {result['availability']}\n"
                     f"{'-' * 50}\n"
                 )
-            # Send push notification
             send_ntfy_notification(notification_message)
+            return True
+        return False
 
     except Exception as e:
         logging.error(f"An error occurred during execution: {str(e)}")
-        # Save page source for debugging
         with open("page_source.html", "w", encoding="utf-8") as f:
             f.write(driver.page_source)
+        return False
 
     finally:
         driver.quit()
 
 if __name__ == "__main__":
-    scrape_appointments()
+    while True:
+        scrape_appointments()
+        time.sleep(RUN_INTERVAL_SECONDS)  # Wait 1 hour before next run
