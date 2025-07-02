@@ -15,6 +15,9 @@ import pytz
 # Set up logging to only show ERROR level messages
 logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# Interval between runs (in seconds, 900 = 15 minutesm 300= 5 minutes)
+RUN_INTERVAL_SECONDS = 300
+
 def scrape_appointments():
     # Primary path to ChromeDriver (direct executable path for ARM Mac)
     chromedriver_path = "/opt/homebrew/Caskroom/chromedriver/138.0.7204.92/chromedriver-mac-arm64/chromedriver"
@@ -25,12 +28,12 @@ def scrape_appointments():
             chromedriver_path = subprocess.check_output(["which", "chromedriver"]).decode().strip()
         except subprocess.CalledProcessError:
             logging.error("ChromeDriver not found in PATH. Please install ChromeDriver.")
-            return
+            return False
 
     # Verify ChromeDriver is not a directory
     if os.path.isdir(chromedriver_path):
         logging.error(f"{chromedriver_path} is a directory, not an executable. Please replace with the ChromeDriver executable.")
-        return
+        return False
 
     # Set up Chrome options for headless mode
     chrome_options = Options()
@@ -48,7 +51,7 @@ def scrape_appointments():
         driver = webdriver.Chrome(service=service, options=chrome_options)
     except Exception as e:
         logging.error(f"Failed to initialize ChromeDriver: {str(e)}")
-        return
+        return False
 
     try:
         # Step 1: Navigate to the default page
@@ -136,15 +139,20 @@ def scrape_appointments():
                 print(f"Distance: {result['distance']}")
                 print(f"Availability: {result['availability']}")
                 print("-" * 50)
+            return True
+        return False
 
     except Exception as e:
         logging.error(f"An error occurred during execution: {str(e)}")
         # Save page source for debugging
         with open("page_source.html", "w", encoding="utf-8") as f:
             f.write(driver.page_source)
+        return False
 
     finally:
         driver.quit()
 
 if __name__ == "__main__":
-    scrape_appointments()
+    while True:
+        scrape_appointments()
+        time.sleep(RUN_INTERVAL_SECONDS)  # Wait 15 minutes before next run
