@@ -57,7 +57,7 @@ This Python script scrapes appointment availability from the Bupa Medical Visa S
      ```
 
 5. **Clone or Download the Script**:
-   - Save the script as `filter_appointments_headless.py` in your working directory.
+   - Save the script as `bupa.py` in your working directory.
 
 ### Windows
 
@@ -95,7 +95,7 @@ This Python script scrapes appointment availability from the Bupa Medical Visa S
      ```
 
 5. **Clone or Download the Script**:
-   - Save the script as `filter_appointments_headless.py` in your working directory.
+   - Save the script as `bupa.py` in your working directory.
 
 ## Running the Script
 
@@ -108,7 +108,7 @@ This Python script scrapes appointment availability from the Bupa Medical Visa S
 
 2. **Run the Script**:
    ```bash
-   python3 filter_appointments_headless.py
+   python3 bupa.py
    ```
    - The script runs in the background (no browser UI) and outputs appointment details to the terminal.
    - Example output:
@@ -129,7 +129,7 @@ This Python script scrapes appointment availability from the Bupa Medical Visa S
 3. **Run in Background** (Optional):
    - To run without keeping the terminal open:
      ```bash
-     python3 filter_appointments_headless.py > output.txt 2>&1 &
+     python3 bupa.py > output.txt 2>&1 &
      ```
    - Check `output.txt` for results.
 
@@ -142,7 +142,7 @@ This Python script scrapes appointment availability from the Bupa Medical Visa S
 
 2. **Run the Script**:
    ```cmd
-   python filter_appointments_headless.py
+   python bupa.py
    ```
    - The script runs in the background (no browser UI) and outputs appointment details to the Command Prompt.
    - Example output is the same as above.
@@ -150,7 +150,7 @@ This Python script scrapes appointment availability from the Bupa Medical Visa S
 3. **Run in Background** (Optional):
    - To run without keeping the Command Prompt open:
      ```cmd
-     start /b python filter_appointments_headless.py > output.txt 2>&1
+     start /b python bupa.py > output.txt 2>&1
      ```
    - Check `output.txt` for results.
 
