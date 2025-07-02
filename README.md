@@ -8,6 +8,7 @@ This Python script scrapes appointment availability from the Bupa Medical Visa S
 - Runs in the background using Chrome in headless mode.
 - Supports macOS (ARM and Intel) and Windows.
 - Includes error handling with page source logging for debugging.
+- Runs every 5 minutes
 
 ## Prerequisites
 - **Python 3.8+**: Ensure Python is installed.
